@@ -1,0 +1,24 @@
+{
+    "name": "@concord/shared",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "scripts": {
+        "test": "vitest run",
+        "build": "tsc --project tsconfig.json",
+        "check-types": "tsc --noEmit",
+        "lint": "eslint src/"
+    },
+    "devDependencies": {
+        "@repo/typescript-config": "*",
+        "typescript": "5.9.2"
+    }
+}

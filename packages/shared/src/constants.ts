@@ -1,0 +1,5 @@
+export const PRESENCE_THROTTLE_MS = 50;
+export const SNAPSHOT_INTERVAL_OPS = 100;
+export const SNAPSHOT_INTERVAL_MS = 30000;
+export const MAX_RECONNECT_DELAY_MS = 30000;
+export const MAX_SHAPES_PER_ROOM = 500;
