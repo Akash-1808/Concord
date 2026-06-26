@@ -1,5 +1,5 @@
 import { compare, type Op, type Shape, type VectorClock } from "@concord/shared";
-import { getConflictFields, getConflictRule } from "./matrix";
+import { getConflictFields, getConflictRule } from "./matrix.js";
 
 export interface ResolveResult {
     resolvedOp: Op;          // may differ from input
