@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "vitest run"
+    "test": "vitest run --no-file-parallelism"
   },
   "keywords": [],
   "author": "",
@@ -16,11 +16,14 @@
   "dependencies": {
     "@concord/conflict": "*",
     "@concord/shared": "*",
-    "dotenv": "^16.4.5",
+    "dotenv": "^16.6.1",
+    "ioredis": "^5.11.1",
+    "pg": "^8.22.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/node": "^26.0.1",
+    "@types/pg": "^8.20.0",
     "@types/ws": "^8.18.1",
     "ts-node-dev": "^2.0.0",
     "tsx": "^4.22.4",

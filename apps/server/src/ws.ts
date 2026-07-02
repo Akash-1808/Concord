@@ -2,9 +2,10 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Room } from './room.js';
 import { PresenceManager } from './presence.js';
 import { clientMessageSchema } from '@concord/shared';
+import { saveSnapshot, clearRoomFromRedis } from './persistence.js';
 
 // Global room registry
-const activeRooms = new Map<string, Room>();
+export const activeRooms = new Map<string, Room>();
 const roomPresence = new Map<string, PresenceManager>();
 
 export function setupWebSocket(wss: WebSocketServer) {
@@ -17,7 +18,7 @@ export function setupWebSocket(wss: WebSocketServer) {
         let messageCount = 0;
         const rateLimitInterval = setInterval(() => { messageCount = 0; }, 1000);
 
-        ws.on('message', (data: Buffer) => {
+        ws.on('message', async (data: Buffer) => {
             // 1. Rate Limiting Check
             messageCount++;
             if (messageCount > 50) {
@@ -50,6 +51,9 @@ export function setupWebSocket(wss: WebSocketServer) {
                             activeRooms.set(roomId, room);
                             roomPresence.set(roomId, new PresenceManager());
                         }
+
+                        // Hydrate from Redis or Postgres before joining
+                        await room.init();
 
                         // Join the room (which handles sending the initial snapshot and broadcasting join)
                         room.join(clientId, name, ws);
@@ -157,7 +161,13 @@ function checkRoomEmpty(roomId: string, room: Room) {
         console.log(`Room ${roomId} is empty. Preparing to save snapshot...`);
         const snapshot = room.getSnapshot();
 
-        // TODO: Call persistence.ts to save snapshot to Postgres
+        // 1. Save final snapshot to Postgres
+        saveSnapshot(roomId, snapshot.shapes, snapshot.vclock, room.opCount)
+            .then(() => clearRoomFromRedis(roomId)) // 2. Clear Redis active state
+            .catch(err => console.error(`[Cleanup] Error saving snapshot/clearing Redis for ${roomId}:`, err));
+
+        // 3. Stop timers
+        room.destroy();
 
         activeRooms.delete(roomId);
         roomPresence.delete(roomId); // Clean up presence data for the room

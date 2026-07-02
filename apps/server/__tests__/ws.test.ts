@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
 import http from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { setupWebSocket } from '../src/ws.js';
+import { redis, pool } from '../src/persistence.js';
 
 // ─── Test Helpers ────────────────────────────────────────────
 
@@ -84,11 +85,18 @@ function joinRoom(ws: WebSocket, roomId: string, clientId: string, name: string)
 
 describe('WebSocket Handler (ws.ts)', () => {
     beforeEach(async () => {
+        await redis.flushdb();
+        await pool.query("DELETE FROM op_log WHERE room_id LIKE 'room-%' AND room_id NOT LIKE 'room-persist-%'; DELETE FROM snapshots WHERE room_id LIKE 'room-%' AND room_id NOT LIKE 'room-persist-%'; DELETE FROM rooms WHERE id LIKE 'room-%' AND id NOT LIKE 'room-persist-%';");
         await startServer();
     });
 
     afterEach(async () => {
         await stopServer();
+    });
+
+    afterAll(async () => {
+        await redis.quit();
+        await pool.end();
     });
 
     // ─── Join Flow ───────────────────────────────────────────
@@ -379,13 +387,13 @@ describe('WebSocket Handler (ws.ts)', () => {
             await new Promise((r) => setTimeout(r, 100));
             ws1.close();
 
-            // A new client joins the same roomId — should get an EMPTY snapshot
-            // because the old room was destroyed and a fresh one is created
+            // A new client joins the same roomId — with persistence (Week 6), 
+            // the room should be restored from Postgres snapshot
             const ws2 = await connectClient();
             const snapshot = await joinRoom(ws2, 'room-1', 'client-2', 'Priya');
 
-            expect(snapshot.shapes).toEqual([]);
-            expect(snapshot.vclock).toEqual({});
+            expect(snapshot.shapes).toHaveLength(1);
+            expect(snapshot.shapes[0].id).toBe('shape-1');
 
             ws2.close();
         });
@@ -418,12 +426,12 @@ describe('WebSocket Handler (ws.ts)', () => {
             ws1.terminate();
             await new Promise((r) => setTimeout(r, 100));
 
-            // New client joins same room — should be empty
+            // New client joins same room — should hydrate from persistence
             const ws2 = await connectClient();
             const snapshot = await joinRoom(ws2, 'room-1', 'client-2', 'Priya');
 
-            expect(snapshot.shapes).toEqual([]);
-            expect(snapshot.vclock).toEqual({});
+            expect(snapshot.shapes).toHaveLength(1);
+            expect(snapshot.shapes[0].id).toBe('shape-1');
 
             ws2.close();
         });
