@@ -15,6 +15,9 @@ import { TextTool } from './tools/TextTool';
 import { SelectTool } from './tools/SelectTool';
 import type { Tool, ToolState } from './tools/Tool';
 import type { Shape } from '@concord/shared';
+import { ConnectionStatus } from './state/ConnectionStatus';
+import { wsClient } from './net/WebSocketClient';
+import './state/Reconciler';
 
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -42,6 +45,9 @@ function App() {
       rendererRef.current?.stop();
       rendererRef.current = null;
     }
+  }, []);
+  useEffect(() => {
+    wsClient.connect('default-room');
   }, []);
 
   useEffect(() => {
@@ -135,6 +141,9 @@ function App() {
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
       {/* The Toolbar */}
       <Toolbar activeTool={activeTool} setActiveTool={setActiveTool} />
+
+      {/* Connection Status */}
+      <ConnectionStatus />
 
       {/* The Property Panel */}
       {selectedShapeIds.length === 1 && (
